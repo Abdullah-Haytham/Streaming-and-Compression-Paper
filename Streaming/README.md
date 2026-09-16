@@ -9,7 +9,7 @@ This folder organizes streaming inference evaluation for the Muaalem/Quran phone
 ## Why two tracks?
 
 - **adaptive-expr** focuses on adaptive chunk sizing/expansion and adaptive selection policy.
-- **static-expr** focuses on fixed-window or non-adaptive streaming baselines (and KV-cache-style static variants where supported).
+- **static-expr** focuses on fixed-window or non-adaptive streaming baselines.
 
 Together they provide comparable quality/latency experiments across adaptive and non-adaptive operating modes.
 
