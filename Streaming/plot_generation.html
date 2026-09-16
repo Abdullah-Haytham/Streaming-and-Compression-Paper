@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nutq Raw Event & PER Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        .js-plotly-plot .plotly .xaxislayer-above { z-index: 100 !important; }
+        body { font-family: 'Inter', -apple-system, sans-serif; }
+        
+        input[type=range] {
+            width: 100%;
+            accent-color: #3182bd;
+        }
+        
+        .tab-btn {
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            border-bottom: 2px solid #3182bd;
+            color: #1d4ed8;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+    
+    <div class="max-w-[95%] mx-auto py-10 px-4 sm:px-6">
+        
+        <div class="mb-8 text-center">
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl">Nutq Adaptive Dynamics & PER</h1>
+            <p class="mt-4 text-lg text-gray-600">Strict structural parsing with interactive visual tuning to match Matplotlib perfectly.</p>
+        </div>
+
+        <div class="flex justify-center mb-6 border-b border-gray-200 max-w-4xl mx-auto">
+            <button onclick="switchTab('violin')" id="tab-violin" class="tab-btn active px-6 py-3 text-gray-600 hover:text-blue-600 font-medium">Violin Distributions</button>
+            <button onclick="switchTab('pareto')" id="tab-pareto" class="tab-btn px-6 py-3 text-gray-600 hover:text-blue-600 font-medium">Pareto Frontier</button>
+        </div>
+
+        <div id="panel-violin" class="w-full max-w-4xl mx-auto block">
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8 border border-gray-200">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Load Raw Event Data</h2>
+                <p class="text-sm text-gray-500 mb-4">Select your raw aggregated results data for Violin Plot:<br>
+                    <code class="bg-gray-100 px-1 rounded text-pink-600 font-mono">results.csv</code>
+                </p>
+                
+                <div class="flex items-center space-x-4 mb-4">
+                    <input type="file" id="file-input-violin" accept=".csv,.txt" 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition" />
+                </div>
+
+                <div id="status-container-violin" class="mt-4 hidden">
+                    <ul id="file-status-list-violin" class="text-sm space-y-1 mb-4"></ul>
+                    <p id="error-msg-violin" class="text-sm text-red-600 hidden mb-4"></p>
+                    <button id="analyze-btn-violin" disabled 
+                            class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
+                        Analyze & Generate Violin Plot
+                    </button>
+                </div>
+            </div>
+
+            <div id="tuning-panel" class="bg-white rounded-xl shadow-md p-6 mb-8 border border-gray-200 w-full hidden">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            Visual Tuning Studio
+                        </h3>
+                    </div>
+                    <button id="download-btn-violin" class="shrink-0 bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-emerald-700 transition flex items-center text-sm">
+                        Download PNG
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">Violin Smoothing: <span id="val-bw" class="text-blue-600">1</span></label>
+                        <input type="range" id="ctrl-bw" min="0.05" max="2.0" step="0.05" value="1">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">Violin Width: <span id="val-width" class="text-blue-600">0.9</span></label>
+                        <input type="range" id="ctrl-width" min="0.2" max="1.5" step="0.1" value="0.9">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">Mean Dot Size: <span id="val-dot" class="text-blue-600">8</span></label>
+                        <input type="range" id="ctrl-dot" min="2" max="16" step="1" value="8">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">Text Offset (Y): <span id="val-offset" class="text-blue-600">0.8</span></label>
+                        <input type="range" id="ctrl-offset" min="0" max="3" step="0.1" value="0.8">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">Median Line Width: <span id="val-med-w" class="text-blue-600">25</span></label>
+                        <input type="range" id="ctrl-med-w" min="10" max="60" step="1" value="25">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">Median Line Thick: <span id="val-med-t" class="text-blue-600">3</span></label>
+                        <input type="range" id="ctrl-med-t" min="1" max="8" step="0.5" value="3">
+                    </div>
+                </div>
+            </div>
+
+            <div id="plots-container-violin" class="w-full max-w-5xl mx-auto flex justify-center"></div>
+        </div>
+
+        <div id="panel-pareto" class="w-full max-w-4xl mx-auto hidden">
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8 border border-gray-200">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Load Aggregated Data for Pareto Front</h2>
+                <p class="text-sm text-gray-500 mb-6">Upload the specific sweep files to analyze the trade-off frontier. The lines will connect strictly following your Matplotlib reference.</p>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-2">Adaptive Eager-Emission Data: <code class="bg-gray-100 px-1 rounded text-pink-600 font-mono text-sm font-normal">aggregate_onnx.csv</code></label>
+                        <input type="file" id="file-input-adaptive" accept=".csv,.txt" 
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition" />
+                        <p id="status-adaptive" class="text-xs mt-2 text-gray-500 italic">Waiting for file...</p>
+                    </div>
+
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-2">Static Sliding-Window Data: <code class="bg-gray-100 px-1 rounded text-pink-600 font-mono text-sm font-normal">global_sweep_metrics_static_onnx.csv</code></label>
+                        <input type="file" id="file-input-static" accept=".csv,.txt" 
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 transition" />
+                        <p id="status-static" class="text-xs mt-2 text-gray-500 italic">Waiting for file...</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-gray-100">
+                    <p id="error-msg-pareto" class="text-sm text-red-600 hidden mb-4 bg-red-50 p-3 rounded-md border border-red-100"></p>
+                    <button id="analyze-btn-pareto" disabled 
+                            class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
+                        Generate Pareto Trade-off Plot
+                    </button>
+                </div>
+            </div>
+
+            <div id="plots-container-pareto" class="w-full max-w-5xl mx-auto flex flex-col items-center">
+                <div class="w-full flex justify-end mb-2 hidden" id="dl-container-pareto">
+                    <button id="download-btn-pareto" class="bg-emerald-600 text-white font-semibold py-1.5 px-3 rounded-md shadow-sm hover:bg-emerald-700 transition flex items-center text-sm">
+                        Download PNG
+                    </button>
+                </div>
+                <div id="plotly-pareto-div" class="w-full max-w-[900px] h-[550px] bg-white shadow-sm border border-gray-300 hidden"></div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.getElementById('tab-violin').classList.remove('active');
+            document.getElementById('tab-pareto').classList.remove('active');
+            
+            document.getElementById('panel-violin').classList.add('hidden');
+            document.getElementById('panel-pareto').classList.add('hidden');
+            
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.getElementById(`panel-${tabId}`).classList.remove('hidden');
+        }
+
+        const TARGET_CONFIGS = [
+            { key: 'rt_b0.5_e1.5_m2_la0.5',   id: 'RT',  b: '0.5', e: '1.5', m: '2',  resp: '1.0s', wcl: '4.0s' },
+            { key: 'nrt_b1.0_e1.0_m3_la0.5',  id: 'NRT', b: '1.0', e: '1.0', m: '3',  resp: '1.5s', wcl: '4.5s' },
+            { key: 'bal_b1.5_e1.5_m4_la1.0',  id: 'BAL', b: '1.5', e: '1.5', m: '4',  resp: '2.5s', wcl: '8.5s' },
+            { key: 'acc_b2.0_e1.5_m8_la1.0',  id: 'ACC', b: '2.0', e: '1.5', m: '8',  resp: '3.0s', wcl: '15s' },
+            { key: 'ofl_b2.0_e1.5_m15_la1.0', id: 'OFL', b: '2.0', e: '1.5', m: '15', resp: '3.0s', wcl: '25.5s' }
+        ];
+
+        let rawDataMap = new Map(); 
+        let currentViolinFile = null;
+
+        let plotConfig = {
+            bandwidth: 1, width: 0.9, dotSize: 8, textOffset: 0.8,
+            medWidth: 25, medThick: 3, fontSize: 14, xFontSize: 11,
+            titleSize: 14, yTitleSize: 14, legendSize: 14
+        };
+
+        const fileInputViolin = document.getElementById('file-input-violin');
+        const analyzeBtnViolin = document.getElementById('analyze-btn-violin');
+        const errorMsgViolin = document.getElementById('error-msg-violin');
+        
+        fileInputViolin.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                currentViolinFile = file;
+                document.getElementById('status-container-violin').classList.remove('hidden');
+                document.getElementById('file-status-list-violin').innerHTML = `<li>✅ <span class="text-green-700 font-medium">${file.name}</span> attached.</li>`;
+                analyzeBtnViolin.disabled = false;
+                errorMsgViolin.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('download-btn-violin').addEventListener('click', () => {
+            const plotDiv = document.getElementById('plotly-target-div');
+            if (plotDiv) Plotly.downloadImage(plotDiv, { format: 'png', width: 900, height: 650, filename: 'PER_Violin_Distribution' });
+        });
+
+        const sliders = ['bw', 'width', 'dot', 'offset', 'med-w', 'med-t'];
+        sliders.forEach(id => {
+            document.getElementById(`ctrl-${id}`).addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                document.getElementById(`val-${id}`).innerText = val;
+                if(id==='bw') plotConfig.bandwidth = val;
+                if(id==='width') plotConfig.width = val;
+                if(id==='dot') plotConfig.dotSize = val;
+                if(id==='offset') plotConfig.textOffset = val;
+                if(id==='med-w') plotConfig.medWidth = val;
+                if(id==='med-t') plotConfig.medThick = val;
+                if(rawDataMap.size > 0) renderViolinPlot();
+            });
+        });
+
+        analyzeBtnViolin.addEventListener('click', async () => {
+            analyzeBtnViolin.innerText = "Parsing data...";
+            analyzeBtnViolin.disabled = true;
+            errorMsgViolin.classList.add('hidden');
+            rawDataMap.clear(); 
+            
+            try {
+                await parseViolinData(currentViolinFile);
+                document.getElementById('tuning-panel').classList.remove('hidden');
+                renderViolinPlot();
+                analyzeBtnViolin.innerText = "Analysis Complete! (Re-run)";
+            } catch (err) {
+                errorMsgViolin.innerText = "Error parsing file: " + err.message;
+                errorMsgViolin.classList.remove('hidden');
+                analyzeBtnViolin.innerText = "Analyze & Generate Violin Plot";
+            } finally {
+                analyzeBtnViolin.disabled = false;
+            }
+        });
+
+        function parseViolinData(file) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(file, {
+                    header: true, skipEmptyLines: true,
+                    complete: function(results) {
+                        results.data.forEach(row => {
+                            if (!row.config_name || row.per === undefined) return;
+                            if (row.error && row.error.trim() !== '') return;
+                            const configName = row.config_name.trim();
+                            const isTarget = TARGET_CONFIGS.some(tc => tc.key === configName);
+                            if (!isTarget) return;
+                            const per = parseFloat(row.per);
+                            if (isNaN(per)) return;
+                            const sampleId = row.sample_id ? row.sample_id.trim() : Math.random().toString();
+                            rawDataMap.set(`${configName}_${sampleId}`, { config_name: configName, per: per * 100 });
+                        });
+                        resolve();
+                    },
+                    error: reject
+                });
+            });
+        }
+
+        function getMedian(arr) {
+            if(arr.length === 0) return 0;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        }
+
+        function renderViolinPlot() {
+            const container = document.getElementById('plots-container-violin');
+            const df_raw = Array.from(rawDataMap.values());
+
+            const allX = [], allY = [], meansX = [], meansY = [], meansText = [], mediansX = [], mediansY = [];
+            let max_n_samples = 0;
+
+            TARGET_CONFIGS.forEach((target) => {
+                const tierData = df_raw.filter(d => d.config_name === target.key);
+                if (tierData.length > 0) {
+                    if (tierData.length > max_n_samples) max_n_samples = tierData.length;
+                    const perValues = tierData.map(d => d.per);
+                    const mean = perValues.reduce((a, b) => a + b, 0) / perValues.length;
+                    const median = getMedian(perValues);
+                    
+                    const label = target.id === 'BAL' 
+                        ? `<b>${target.id} ★<br>b=${target.b}, e=${target.e}, m=${target.m}<br>resp=${target.resp} / WCL=${target.wcl}</b>`
+                        : `<b>${target.id}<br>b=${target.b}, e=${target.e}, m=${target.m}<br>resp=${target.resp} / WCL=${target.wcl}</b>`;
+
+                    perValues.forEach(val => { allX.push(label); allY.push(Math.min(val, 30)); });
+                    meansX.push(label); meansY.push(Math.min(mean, 30)); meansText.push(mean.toFixed(2) + '%');
+                    mediansX.push(label); mediansY.push(Math.min(median, 30));
+                }
+            });
+
+            if (allX.length === 0) {
+                container.innerHTML = '<div class="text-red-500 bg-red-50 p-4 rounded-md font-medium">Could not find target configs in the data. Check the file.</div>';
+                return;
+            }
+
+            let plotDiv = document.getElementById('plotly-target-div');
+            if (!plotDiv) {
+                container.innerHTML = '';
+                const section = document.createElement('div');
+                section.className = 'bg-white shadow-sm border border-gray-300 flex justify-center w-full max-w-[900px] h-[650px]';
+                plotDiv = document.createElement('div');
+                plotDiv.id = 'plotly-target-div'; plotDiv.style.width = '100%'; plotDiv.style.height = '100%';
+                section.appendChild(plotDiv);
+                container.appendChild(section);
+            }
+
+            const plotData = [
+                { type: 'violin', x: allX, y: allY, bandwidth: plotConfig.bandwidth, width: plotConfig.width, box: { visible: false }, meanline: { visible: false }, line: { color: '#3182bd', width: 1.5 }, fillcolor: 'rgba(198, 219, 239, 0.7)', spanmode: 'hard', showlegend: false, points: false },
+                { type: 'scatter', x: mediansX, y: mediansY, mode: 'markers', marker: { symbol: 'line-ew', size: plotConfig.medWidth, line: { color: '#1f77b4', width: plotConfig.medThick } }, showlegend: false, hoverinfo: 'skip' },
+                { type: 'scatter', x: meansX, y: meansY, mode: 'markers', marker: { size: plotConfig.dotSize, color: '#1f77b4' }, showlegend: false, hoverinfo: 'skip' },
+                { type: 'scatter', x: meansX, y: meansY.map(y => y + plotConfig.textOffset), mode: 'text', text: meansText, textposition: 'middle center', textfont: { color: '#3182bd', size: plotConfig.fontSize }, showlegend: false, hoverinfo: 'skip' }
+            ];
+
+            const annotations = [];
+            const balLabel = meansX.find(l => l.includes('BAL ★')); 
+            if (balLabel) annotations.push({ x: balLabel, y: 30, xref: 'x', yref: 'y', text: '★ production config', showarrow: false, font: { color: '#2ca02c', size: plotConfig.legendSize }, xanchor: 'center', yanchor: 'middle' });
+
+            const layout = {
+                title: { text: `<b>PER Distribution Across Adaptive Tiers (n = ${max_n_samples.toLocaleString()} each)</b>`, font: { size: plotConfig.titleSize } },
+                plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff', font: { family: 'Arial, -apple-system, sans-serif' }, margin: { t: 50, b: 90, l: 60, r: 20 },
+                annotations: annotations,
+                xaxis: { categoryorder: 'array', categoryarray: TARGET_CONFIGS.map(t => meansX.find(l => l.includes(t.id))), showgrid: true, gridcolor: '#f0f0f0', zeroline: false, showline: true, mirror: 'allticks', linecolor: '#252525', linewidth: 1.5, ticks: 'inside', tickcolor: '#252525', ticklen: 5, tickfont: { size: plotConfig.xFontSize } },
+                yaxis: { title: { text: '<b>PER (%, capped at 30)</b>', font: { size: plotConfig.yTitleSize } }, range: [-1.5, 32], showgrid: true, gridcolor: '#f0f0f0', gridwidth: 1, zeroline: false, showline: true, mirror: 'allticks', linecolor: '#252525', linewidth: 1.5, ticks: 'inside', tickcolor: '#252525', ticklen: 5, dtick: 5, tickfont: { size: plotConfig.fontSize } }
+            };
+
+            Plotly.react(plotDiv, plotData, layout, {responsive: true, displayModeBar: false});
+        }
+
+        let adaptiveDataRaw = null;
+        let staticDataRaw = null;
+
+        const inputAdaptive = document.getElementById('file-input-adaptive');
+        const inputStatic = document.getElementById('file-input-static');
+        const btnPareto = document.getElementById('analyze-btn-pareto');
+        const errorMsgPareto = document.getElementById('error-msg-pareto');
+
+        inputAdaptive.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('status-adaptive').innerHTML = `✅ Attached: <span class="font-medium text-blue-700">${file.name}</span>`;
+                checkParetoReady();
+            }
+        });
+
+        inputStatic.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('status-static').innerHTML = `✅ Attached: <span class="font-medium text-red-700">${file.name}</span>`;
+                checkParetoReady();
+            }
+        });
+
+        function checkParetoReady() {
+            if (inputAdaptive.files.length > 0 && inputStatic.files.length > 0) {
+                btnPareto.disabled = false;
+            }
+        }
+
+        btnPareto.addEventListener('click', async () => {
+            btnPareto.disabled = true;
+            btnPareto.innerText = "Processing Trade-offs...";
+            errorMsgPareto.classList.add('hidden');
+
+            try {
+                adaptiveDataRaw = await parseAggregateFile(inputAdaptive.files[0], 'adaptive');
+                staticDataRaw = await parseAggregateFile(inputStatic.files[0], 'static');
+                
+                let warnings = [];
+                if (adaptiveDataRaw.length === 0) warnings.push("No valid data parsed from Adaptive file.");
+                if (staticDataRaw.length === 0) warnings.push("No valid data parsed from Static file.");
+                
+                if (warnings.length > 0) {
+                    errorMsgPareto.innerHTML = warnings.join('<br>');
+                    errorMsgPareto.classList.remove('hidden');
+                }
+
+                document.getElementById('plotly-pareto-div').classList.remove('hidden');
+                document.getElementById('dl-container-pareto').classList.remove('hidden');
+                renderParetoPlot();
+                
+                btnPareto.innerText = "Generate Pareto Trade-off Plot (Re-run)";
+            } catch(e) {
+                errorMsgPareto.innerText = "Error processing files: " + e.message;
+                errorMsgPareto.classList.remove('hidden');
+                btnPareto.innerText = "Generate Pareto Trade-off Plot";
+            } finally {
+                btnPareto.disabled = false;
+            }
+        });
+
+        function parseAggregateFile(file, type) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(file, {
+                    header: true, 
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        const parsedData = [];
+                        
+                        results.data.forEach(row => {
+                            // Extract exact columns as provided in the CSV sample
+                            const configName = row['config_name'] || row['Config Name'];
+                            
+                            // Prefer per_mean_inclusive per your dataset, fallback to per_mean
+                            let per = parseFloat(row['per_mean_inclusive']);
+                            if (isNaN(per)) per = parseFloat(row['per_mean']);
+                            if (isNaN(per)) per = parseFloat(row['per']);
+                            
+                            // Check for explicit Pareto flag in dataset
+                            let isPareto = false;
+                            let hasExplicitPareto = false;
+                            if (row['is_pareto'] !== undefined) {
+                                hasExplicitPareto = true;
+                                isPareto = String(row['is_pareto']).trim().toLowerCase() === 'true';
+                            }
+
+                            if (!configName || isNaN(per)) return;
+
+                            // Calculate Latency/Responsiveness strictly mathematically to map to X-axis bounds [0-9]
+                            let resp = NaN;
+                            if (type === 'adaptive') {
+                                const bMatch = configName.match(/b(\d+\.?\d*)/i);
+                                const laMatch = configName.match(/la(\d+\.?\d*)/i);
+                                if (bMatch && laMatch) {
+                                    resp = parseFloat(bMatch[1]) + parseFloat(laMatch[1]);
+                                }
+                            } else if (type === 'static') {
+                                const cMatch = configName.match(/chunk(\d+\.?\d*)/i);
+                                const rMatch = configName.match(/right(\d+\.?\d*)/i);
+                                if (cMatch && rMatch) {
+                                    resp = parseFloat(cMatch[1]) + parseFloat(rMatch[1]);
+                                }
+                            }
+
+                            if (!isNaN(resp)) {
+                                parsedData.push({ 
+                                    config: configName, 
+                                    resp: resp, 
+                                    per: per, 
+                                    isPareto: isPareto,
+                                    hasExplicitPareto: hasExplicitPareto
+                                });
+                            }
+                        });
+
+                        // Standardize PER scale (fraction vs percentage) across the entire parsed set safely
+                        if (parsedData.length > 0) {
+                            let maxPer = Math.max(...parsedData.map(d => d.per));
+                            if (maxPer <= 1.5) {
+                                parsedData.forEach(d => d.per *= 100);
+                            }
+                        }
+                        
+                        resolve(parsedData);
+                    },
+                    error: reject
+                });
+            });
+        }
+
+        function getParetoFrontier(data) {
+            // Sort by X (responsiveness) ascending, then by Y (PER) descending.
+            // This is visually critical: when Plotly uses mode: 'lines', sorting it this 
+            // way will perfectly connect vertical steps (drops in PER for the exact same latency).
+            const sorted = [...data].sort((a, b) => {
+                if (Math.abs(a.resp - b.resp) > 0.0001) return a.resp - b.resp;
+                return b.per - a.per;
+            });
+            
+            const pareto = [];
+            const nonPareto = [];
+
+            // FORCE Dynamic Fallback logic (calculates strictly monotonically descending curve).
+            // We ignore the CSV's is_pareto column because it often omits the intermediate 
+            // vertical points needed to draw the continuous stepped line exactly like Matplotlib.
+            let currentMinY = Infinity;
+            for (let pt of sorted) {
+                if (pt.per < currentMinY) {
+                    pareto.push(pt);
+                    currentMinY = pt.per; 
+                } else {
+                    nonPareto.push(pt);
+                }
+            }
+            
+            return { pareto, nonPareto };
+        }
+
+        function renderParetoPlot() {
+            const plotDiv = document.getElementById('plotly-pareto-div');
+
+            const adp = getParetoFrontier(adaptiveDataRaw);
+            const stc = getParetoFrontier(staticDataRaw);
+
+            const prodPoint = adaptiveDataRaw.find(d => d.config.includes('_b1.5_e1.5_m4_la1.0'));
+            
+            const traces = [];
+
+            if (stc.nonPareto.length) {
+                traces.push({
+                    x: stc.nonPareto.map(d => d.resp),
+                    y: stc.nonPareto.map(d => d.per),
+                    mode: 'markers',
+                    type: 'scatter',
+                    marker: { color: 'rgba(214, 39, 40, 0.4)', symbol: 'circle', size: 7 },
+                    showlegend: false,
+                    hoverinfo: 'text',
+                    text: stc.nonPareto.map(d => d.config)
+                });
+            }
+
+            if (stc.pareto.length) {
+                traces.push({
+                    x: stc.pareto.map(d => d.resp),
+                    y: stc.pareto.map(d => d.per),
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: '<b>Static sliding-window (Pareto)</b>',
+                    line: { color: '#d62728', width: 2, shape: 'linear' },
+                    marker: { color: '#d62728', symbol: 'circle', size: 8 },
+                    hoverinfo: 'text',
+                    text: stc.pareto.map(d => `Config: ${d.config}<br>Resp: ${d.resp.toFixed(2)}s<br>PER: ${d.per.toFixed(2)}%`)
+                });
+            }
+
+            if (adp.nonPareto.length) {
+                traces.push({
+                    x: adp.nonPareto.map(d => d.resp),
+                    y: adp.nonPareto.map(d => d.per),
+                    mode: 'markers',
+                    type: 'scatter',
+                    marker: { color: 'rgba(154, 190, 222, 0.7)', symbol: 'circle', size: 6 },
+                    showlegend: false,
+                    hoverinfo: 'text',
+                    text: adp.nonPareto.map(d => d.config)
+                });
+            }
+
+            if (adp.pareto.length) {
+                traces.push({
+                    x: adp.pareto.map(d => d.resp),
+                    y: adp.pareto.map(d => d.per),
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: '<b>Adaptive Eager-Emission (Pareto)</b>',
+                    line: { color: '#1f77b4', width: 2, shape: 'linear' },
+                    marker: { color: '#1f77b4', symbol: 'square', size: 8 },
+                    hoverinfo: 'text',
+                    text: adp.pareto.map(d => `Config: ${d.config}<br>Resp: ${d.resp.toFixed(2)}s<br>PER: ${d.per.toFixed(2)}%`)
+                });
+            }
+
+            if (prodPoint) {
+                traces.push({
+                    x: [prodPoint.resp],
+                    y: [prodPoint.per],
+                    mode: 'markers',
+                    type: 'scatter',
+                    name: '<b>Production (_b1.5_e1.5_m4_la1.0)</b>',
+                    marker: { color: '#2ca02c', symbol: 'star', size: 15 },
+                    hoverinfo: 'text',
+                    text: [`★ Production<br>Config: ${prodPoint.config}<br>Resp: ${prodPoint.resp.toFixed(2)}s<br>PER: ${prodPoint.per.toFixed(2)}%`]
+                });
+            }
+
+            const layout = {
+                title: { 
+                    text: '<b>Accuracy-Latency Trade-off: Adaptive vs. Static Sliding-Window</b>',
+                    font: { family: 'Arial, sans-serif', size: 18, color: '#000' }
+                },
+                plot_bgcolor: '#ffffff',
+                paper_bgcolor: '#ffffff',
+                margin: { t: 60, b: 45, l: 45, r: 20 },
+                xaxis: {
+                    title: { 
+                        text: '<b>Responsiveness (s)  [ = b + &#8467;<sub>a</sub> / chunk + right ]</b>', 
+                        font: { size: 15, color: '#000' },
+                        standoff: 8
+                    },
+                    range: [0.5, 9.5],
+                    dtick: 1,
+                    minor: { dtick: 0.5, ticklen: 3, tickcolor: '#000' },
+                    showgrid: true,
+                    gridcolor: '#e6e6e6',
+                    zeroline: false,
+                    showline: true,
+                    mirror: 'allticks',
+                    linecolor: '#000',
+                    linewidth: 1.5,
+                    ticks: 'inside',
+                    tickcolor: '#000',
+                    tickfont: { size: 14, color: '#000', weight: 'bold' }
+                },
+                yaxis: {
+                    title: { 
+                        text: '<b>Mean Inclusive PER (%)</b>', 
+                        font: { size: 15, color: '#000' },
+                        standoff: 8
+                    },
+                    range: [0, 11],
+                    dtick: 2,
+                    minor: { dtick: 1, ticklen: 3, tickcolor: '#000' },
+                    showgrid: true,
+                    gridcolor: '#e6e6e6',
+                    zeroline: false,
+                    showline: true,
+                    mirror: 'allticks',
+                    linecolor: '#000',
+                    linewidth: 1.5,
+                    ticks: 'inside',
+                    tickcolor: '#000',
+                    tickfont: { size: 14, color: '#000', weight: 'bold' }
+                },
+                legend: {
+                    x: 0.99,
+                    y: 0.98,
+                    xanchor: 'right',
+                    yanchor: 'top',
+                    bgcolor: 'rgba(255, 255, 255, 0.9)',
+                    bordercolor: '#cccccc',
+                    borderwidth: 1,
+                    font: { size: 13, color: '#000', weight: 'bold' }
+                }
+            };
+
+            Plotly.react(plotDiv, traces, layout, {responsive: true, displayModeBar: false});
+        }
+
+        document.getElementById('download-btn-pareto').addEventListener('click', () => {
+            const plotDiv = document.getElementById('plotly-pareto-div');
+            if (plotDiv) {
+                Plotly.downloadImage(plotDiv, { format: 'png', width: 900, height: 550, filename: 'Accuracy_Latency_Tradeoff' });
+            }
+        });
+    </script>
+</body>
+</html>
