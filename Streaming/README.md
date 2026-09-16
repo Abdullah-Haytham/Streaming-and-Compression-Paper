@@ -4,6 +4,7 @@ This folder organizes streaming inference evaluation for the Muaalem/Quran phone
 
 - `adaptive-expr/` — adaptive streaming sweep documentation and usage (`sweep_adaptive_dataset.py`).
 - `static-expr/` — static/fixed-window streaming sweep documentation and usage (`sweep_streaming_advanced.py`).
+- `plot_generation.html` — HTML plot/report page for streaming experiment result visualization.
 
 ## Why two tracks?
 
