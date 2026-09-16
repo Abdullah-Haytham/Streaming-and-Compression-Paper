@@ -1,28 +1,73 @@
 # static-expr
 
-Static streaming experiment documentation for the Muaalem/Quran phoneme pipeline.
+Documentation for the static/fixed-window streaming experiment track and its relation to the adaptive track.
 
 ## Entry point
 
-- Script name: `sweep_streaming_advanced.py`
-- Intended location in this structure: `Streaming/static-expr/sweep_streaming_advanced.py`
+- Intended static entry script: `/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming/static-expr/sweep_streaming_advanced.py`
 
-This workflow is for **static/windowed streaming evaluation** and is the companion to the adaptive workflow documented under `Streaming/adaptive-expr/README.md`.
+This track covers non-adaptive/static workflows (fixed-window and static variants, including KV-cache variants where implemented in that script).
 
-## Goal
+---
 
-Use the static experiment track to benchmark non-adaptive streaming settings (including fixed-window behavior and, where implemented in the script, KV-cache variants) and compare quality/latency trade-offs under a consistent dataset/evaluation policy.
+## Tested environment
 
-## Typical workflow
+| Component | Value |
+|---|---|
+| OS | Microsoft Windows 11 Pro |
+| OS version | 10.0.26200 |
+| CPU | 12th Gen Intel(R) Core(TM) i5-12450H |
+| RAM | 16,891,633,664 bytes (~15.74 GiB / 16 GB installed) |
+| GPU | NVIDIA GeForce RTX 3050 Laptop GPU |
+| NVIDIA driver | 537.70 |
+| GPU memory | 4096 MiB |
 
-1. Select static sweep settings in `sweep_streaming_advanced.py`.
-2. Run the sweep on the intended dataset split/cache.
-3. Inspect produced per-sample and aggregate artifacts for accuracy, latency, and failure behavior.
-4. Compare results against adaptive-expr outputs when choosing deployment policy.
+> Timing and memory measurements are hardware-dependent.
 
-## Running
+---
 
-From the `Streaming/static-expr` directory:
+## Setup and prerequisites
+
+Use the same runtime environment as adaptive experiments:
+
+- Working directory: `/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming`
+- Install dependencies from `requirements.txt`
+- Set Hugging Face token before running sweeps
+
+```powershell
+cd "/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:HF_TOKEN = "hf_..."
+```
+
+---
+
+## Building the dataset DB for static experiments
+
+Use the same targeted golden dataset cache strategy used by streaming sweep scripts:
+
+- cache root: `targeted_golden_dataset`
+- core artifacts:
+  - `manifest.json`
+  - `audio/*.npy`
+  - optional `batch_refs.pkl`
+
+Recommended process:
+
+1. Build/refresh cache once using the adaptive entry script:
+
+```powershell
+cd "/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming"
+python sweep_adaptive_dataset.py --force-rebuild-dataset
+```
+
+2. Run static experiments against the same cache to keep adaptive vs static comparison consistent.
+
+---
+
+## Running static sweep
 
 ```powershell
 cd "/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming/static-expr"
@@ -30,4 +75,21 @@ python sweep_streaming_advanced.py --help
 python sweep_streaming_advanced.py
 ```
 
-Use `--help` as the source of truth for the currently supported static CLI options in your branch.
+---
+
+## Static script arguments
+
+The static script file is referenced as `sweep_streaming_advanced.py`; use its `main()` / `--help` output as the source of truth for argument defaults and meanings in your current branch.
+
+If your checkout does not currently contain `/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming/static-expr/sweep_streaming_advanced.py`, sync to the branch/restructure commit that introduced it before documenting its exact CLI table.
+
+When maintaining this README, document each argument exactly as defined in that script (name, default, and practical purpose), similar to the adaptive CLI table pattern.
+
+---
+
+## Troubleshooting
+
+- CUDA/device errors: fallback to CPU and validate PyTorch/CUDA installation.
+- HF auth/rate limits: ensure `HF_TOKEN` and retry after limits cool down.
+- Dataset/reference issues: rebuild targeted cache to refresh manifests/audio files.
+- Windows execution: prefer quoted paths and PowerShell env syntax.

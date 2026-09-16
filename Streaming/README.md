@@ -1,19 +1,23 @@
 # Streaming Experiments
 
-This folder organizes streaming inference evaluation for the Muaalem/Quran phoneme pipeline into two experiment tracks:
+This folder contains streaming evaluation tracks for the Muaalem/Quran phoneme pipeline.
 
-- `adaptive-expr/` — adaptive streaming sweep documentation and usage (`sweep_adaptive_dataset.py`).
-- `static-expr/` — static/fixed-window streaming sweep documentation and usage (`sweep_streaming_advanced.py`).
-- `plot_generation.html` — HTML plot/report page for streaming experiment result visualization.
+## Contents
 
-## Why two tracks?
+- `/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming/adaptive-expr/`  
+  Adaptive streaming docs centered on `sweep_adaptive_dataset.py`.
+- `/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming/static-expr/`  
+  Static/fixed-window streaming docs centered on `sweep_streaming_advanced.py`.
+- `/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming/plot_generation.html`  
+  Plot/report page for experiment visualization.
 
-- **adaptive-expr** focuses on adaptive chunk sizing/expansion and adaptive selection policy.
-- **static-expr** focuses on fixed-window or non-adaptive streaming baselines.
+## Goal
 
-Together they provide comparable quality/latency experiments across adaptive and non-adaptive operating modes.
+- Keep adaptive and static experiment procedures documented independently.
+- Preserve comparable evaluation practices (dataset cache, metrics, policy interpretation).
+- Make side-by-side quality/latency analysis straightforward.
 
 ## Read next
 
-- Adaptive docs: `Streaming/adaptive-expr/README.md`
-- Static docs: `Streaming/static-expr/README.md`
+- `/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming/adaptive-expr/README.md`
+- `/home/runner/work/Streaming-and-Compression-Paper/Streaming-and-Compression-Paper/Streaming/static-expr/README.md`
