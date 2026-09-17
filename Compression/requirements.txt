@@ -1,0 +1,10 @@
+torch==2.14.0
+numpy==2.4.6
+transformers==5.17.0
+datasets==5.0.1
+huggingface_hub==1.32.0
+safetensors==0.8.0
+wandb==0.30.0
+audiomentations==0.43.1
+soundfile==0.14.0
+nvidia-ml-py==13.610.43
