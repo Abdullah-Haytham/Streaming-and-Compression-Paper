@@ -8,6 +8,10 @@ Comprehensive documentation for the adaptive streaming experiment track of the M
 
 This script evaluates **AdaptiveStreamingMuaalem only**. It does not benchmark the fixed-window static pipeline or KV-cache static variants.
 
+## Acknowledgements & Third-Party Code
+
+Please note that the `imports` folder contains code sourced from [obadx's GitHub repository](https://github.com/obadx). This code was published by another researcher and is utilized alongside our own custom implementations for the experiments detailed in the paper.
+
 ---
 
 ## Tested environment
