@@ -8,6 +8,10 @@ Documentation for the static/fixed-window streaming experiment track and its rel
 
 This track covers non-adaptive/static workflows (fixed-window and static variants, including KV-cache variants where implemented in that script).
 
+## Acknowledgements & Third-Party Code
+
+Please note that the `imports` folder contains code sourced from [obadx's GitHub repository](https://github.com/obadx). This code was published by another researcher and is utilized alongside our own custom implementations for the experiments detailed in the paper.
+
 ---
 
 ## Tested environment
